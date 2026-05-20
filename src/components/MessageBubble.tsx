@@ -1,7 +1,6 @@
 import { Message } from '../lib/types';
 import { formatTime } from '../lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
-import ProductContextCard from './ProductContextCard';
 
 interface MessageBubbleProps {
   message: Message;
@@ -16,7 +15,7 @@ export default function MessageBubble({
   showAvatar = true,
   senderFallback,
 }: MessageBubbleProps) {
-  const isRead = message.status === 'read';
+  const isRead = message.isRead;
 
   return (
     <div
@@ -25,7 +24,7 @@ export default function MessageBubble({
       }`}
     >
       {!isOwn && (
-        <div className="w-8 flex-shrink-0">
+        <div className="w-8 shrink-0">
           {showAvatar && senderFallback && (
             <img
               src={
@@ -51,22 +50,13 @@ export default function MessageBubble({
         )}
 
         <div className="space-y-1">
-          {message.metadata?.productContext && (
-            <ProductContextCard context={message.metadata.productContext} />
-          )}
-
-          {message.type === 'image' && message.attachmentUrl ? (
+          {message.fileType === 'image' && /^https?:\/\//.test(message.content) ? (
             <div className={`overflow-hidden rounded-md border text-sm ${isOwn ? 'border-bg-accent bg-bg-accent/5' : 'border-gray-200 bg-white'}`}>
               <img
-                src={message.attachmentUrl}
+                src={message.content}
                 alt="Attachment"
                 className="max-h-64 max-w-full rounded-t-md object-cover"
               />
-              {message.content && (
-                <div className="p-3">
-                  <p className="text-slate-900">{message.content}</p>
-                </div>
-              )}
             </div>
           ) : (
             <div
@@ -76,7 +66,7 @@ export default function MessageBubble({
                   : 'border border-gray-200 bg-white text-slate-900'
               }`}
             >
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <p className="whitespace-pre-wrap wrap-break-word">{message.content}</p>
             </div>
           )}
         </div>
@@ -92,9 +82,9 @@ export default function MessageBubble({
           {isOwn && (
             <span className="text-slate-400">
               {isRead ? (
-                <CheckCheck className="h-[14px] w-[14px] text-blue-500" />
+                <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
               ) : (
-                <Check className="h-[14px] w-[14px]" />
+                <Check className="h-3.5 w-3.5" />
               )}
             </span>
           )}

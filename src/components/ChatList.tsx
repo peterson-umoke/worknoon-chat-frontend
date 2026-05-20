@@ -44,9 +44,9 @@ export default function ChatList({
 
         const isOnline = onlineUsers.has(otherParticipant._id);
         const isActive = conv._id === activeId;
-        const unreadCount = conv.unreadCounts[currentUser._id] || 0;
-        const isFromMe = conv.lastMessage?.senderId === currentUser._id;
-        const isRead = isFromMe && conv.lastMessage?.status === 'read';
+        const unreadCount = conv.unreadCount?.[currentUser._id] || 0;
+        const isFromMe = conv.lastMessage?.sender?._id === currentUser._id;
+        const isRead = isFromMe && conv.lastMessage?.isRead;
 
         return (
           <button

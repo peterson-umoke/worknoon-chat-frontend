@@ -7,7 +7,7 @@ import { useSocket } from '../../context/SocketContext';
 import ChatList from '../../components/ChatList';
 import ChatPanel from '../../components/ChatPanel';
 import Sidebar from '../../components/Sidebar';
-import { Conversation, Message } from '../../lib/types';
+import { Conversation, Message, User } from '../../lib/types';
 import * as api from '../../lib/api';
 import { Search, Menu, X, MessageSquare, Edit } from 'lucide-react';
 
@@ -22,6 +22,10 @@ export default function InboxPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<User[]>([]);
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [creatingConversationId, setCreatingConversationId] = useState<string | null>(null);
+  const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
 
   const loadConversations = useCallback(async () => {
     if (!token) return;
@@ -35,6 +39,29 @@ export default function InboxPage() {
     }
   }, [token]);
 
+  const loadUsers = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await api.getUsers(token);
+      setUsers(data);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+    }
+  }, [token]);
+
+  const selectConversation = useCallback(async (conv: Conversation) => {
+    if (!token) return;
+    setActiveConversation(conv);
+    setMobileSidebarOpen(false);
+    try {
+      const data = await api.getMessages(token, conv._id);
+      setMessages(data);
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+      setMessages([]);
+    }
+  }, [token]);
+
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login');
@@ -42,8 +69,9 @@ export default function InboxPage() {
     }
     if (token && !isLoading) {
       loadConversations();
+      loadUsers();
     }
-  }, [token, user, isLoading, loadConversations, router]);
+  }, [token, user, isLoading, loadConversations, loadUsers, router]);
 
   useEffect(() => {
     if (!socket) return;
@@ -61,11 +89,58 @@ export default function InboxPage() {
     };
   }, [socket, token, activeConversation, loadConversations]);
 
+  useEffect(() => {
+    if (!socket || !activeConversation?._id) return;
+    socket.emit('joinRoom', activeConversation._id);
+    return () => {
+      socket.emit('leaveRoom', activeConversation._id);
+    };
+  }, [socket, activeConversation?._id]);
+
   const handleSelectConversation = async (id: string) => {
     const conv = conversations.find((c) => c._id === id);
     if (!conv) return;
-    setActiveConversation(conv);
-    setMobileSidebarOpen(false);
+    await selectConversation(conv);
+  };
+
+  const handleCreateConversation = async (participantId: string) => {
+    if (!token) return;
+    setCreatingConversationId(participantId);
+    try {
+      const conversation = await api.createConversation(token, { participantIds: [participantId] });
+      await loadConversations();
+      await selectConversation(conversation);
+      setShowNewChat(false);
+    } catch (err) {
+      console.error('Failed to create conversation:', err);
+    } finally {
+      setCreatingConversationId(null);
+    }
+  };
+
+  const handleDeleteConversation = async (conversationId: string) => {
+    if (!token) return;
+
+    setDeletingConversationId(conversationId);
+    try {
+      await api.deleteConversation(token, conversationId);
+
+      const refreshed = await api.getConversations(token);
+      setConversations(refreshed);
+
+      if (activeConversation?._id === conversationId) {
+        if (refreshed.length > 0) {
+          await selectConversation(refreshed[0]);
+        } else {
+          setActiveConversation(null);
+          setMessages([]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
+    } finally {
+      setDeletingConversationId(null);
+    }
   };
 
   if (isLoading || !user) {
@@ -85,6 +160,46 @@ export default function InboxPage() {
         />
       )}
 
+      {showNewChat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white shadow-lg">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h2 className="text-sm font-semibold text-slate-900">Start New Conversation</h2>
+              <button
+                onClick={() => setShowNewChat(false)}
+                className="text-slate-400 transition-colors hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="max-h-80 overflow-y-auto p-2">
+              {users.length === 0 ? (
+                <p className="p-4 text-sm text-slate-500">No users available.</p>
+              ) : (
+                users.map((targetUser) => (
+                  <button
+                    key={targetUser._id}
+                    onClick={() => handleCreateConversation(targetUser._id)}
+                    disabled={creatingConversationId === targetUser._id}
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left transition-colors hover:bg-slate-50 disabled:opacity-60"
+                  >
+                    <img
+                      src={targetUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${targetUser.username}`}
+                      alt={targetUser.username}
+                      className="h-8 w-8 rounded-full border border-gray-200 object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">{targetUser.username}</p>
+                      <p className="truncate text-xs text-slate-500">{targetUser.email}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Container */}
       <div className="flex w-full h-full">
         <Sidebar />
@@ -98,7 +213,7 @@ export default function InboxPage() {
             <div className="flex items-center gap-3">
               <h1 className="text-[22px] font-semibold text-slate-900 tracking-tight">Messages</h1>
               <span className="flex h-5 items-center rounded-full bg-slate-100 px-2 text-xs font-semibold text-slate-600">
-                12
+                {loading ? '...' : conversations.length}
               </span>
             </div>
             <div className="flex items-center gap-1">
@@ -109,7 +224,7 @@ export default function InboxPage() {
                 <X className="h-5 w-5" />
               </button>
               <button
-                onClick={() => router.push('/profile')}
+                onClick={() => setShowNewChat(true)}
                 className="flex h-9 w-9 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 transition-colors bg-slate-50 border border-slate-200"
                 title="New Chat"
               >
@@ -156,6 +271,8 @@ export default function InboxPage() {
               conversation={activeConversation}
               messages={messages}
               onMessagesChange={setMessages}
+              onDeleteConversation={handleDeleteConversation}
+              isDeletingConversation={deletingConversationId === activeConversation._id}
             />
           ) : (
             <div className="flex flex-1 items-center justify-center bg-white border-l border-gray-100">
@@ -176,7 +293,7 @@ export default function InboxPage() {
                     Open Inbox
                   </button>
                   <button
-                    onClick={() => router.push('/profile')}
+                    onClick={() => setShowNewChat(true)}
                     className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 shadow-sm"
                   >
                     <Edit className="h-4.5 w-4.5" />

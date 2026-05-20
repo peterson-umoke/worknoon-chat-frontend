@@ -55,6 +55,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setIsConnected(false);
     });
 
+    newSocket.on('onlineUsersSnapshot', ({ userIds }: { userIds: string[] }) => {
+      setOnlineUsers(new Set(userIds));
+    });
+
     newSocket.on('userPresence', ({ userId, isOnline }: { userId: string; isOnline: boolean }) => {
       setOnlineUsers((prev) => {
         const next = new Set(prev);
@@ -86,11 +90,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    newSocket.on('stopTypingIndicator', ({ conversationId, userId }: { conversationId: string; userId: string }) => {
+    newSocket.on('stopTypingIndicator', ({ conversationId, username }: { conversationId: string; username: string }) => {
       setTypingUsers((prev) => {
         const next = new Map(prev);
         const list = next.get(conversationId) || [];
-        const filtered = list.filter((_, i) => i !== list.indexOf(userId));
+        const filtered = list.filter((name) => name !== username);
         if (filtered.length === 0) {
           next.delete(conversationId);
         } else {

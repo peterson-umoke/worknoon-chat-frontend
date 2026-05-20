@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, MessageCircle, MessageSquare, UserCircle2, LayoutDashboard } from 'lucide-react';
+import { LogOut, MessageCircle, MessageSquare, LayoutDashboard } from 'lucide-react';
 
 export default function Sidebar() {
   const router = useRouter();
@@ -41,18 +41,6 @@ export default function Sidebar() {
         {isActive('/inbox') && <MessageSquare className="absolute h-5 w-5" />}
         <span className="pointer-events-none absolute left-full z-40 ml-2 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
           Inbox
-        </span>
-      </button>
-
-      <button
-        onClick={() => router.push('/profile')}
-        className={getIconClassName('/profile')}
-        title="Profile"
-      >
-        <UserCircle2 className="h-5 w-5" fill={isActive('/profile') ? 'currentColor' : 'none'} opacity={isActive('/profile') ? 0.2 : 1} />
-        {isActive('/profile') && <UserCircle2 className="absolute h-5 w-5" />}
-        <span className="pointer-events-none absolute left-full z-40 ml-2 rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-          Profile
         </span>
       </button>
 

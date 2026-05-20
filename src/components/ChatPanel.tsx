@@ -7,25 +7,31 @@ import { Conversation, Message } from '../lib/types';
 import * as api from '../lib/api';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
-import { Send, Phone, Video, MoreVertical, Image as ImageIcon, Paperclip } from 'lucide-react';
+import { Send, Phone, Video, MoreVertical, Image as ImageIcon, Paperclip, Trash2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
 
 interface ChatPanelProps {
   conversation: Conversation;
   messages: Message[];
   onMessagesChange: (messages: Message[]) => void;
+  onDeleteConversation: (conversationId: string) => Promise<void>;
+  isDeletingConversation?: boolean;
 }
 
 export default function ChatPanel({
   conversation,
   messages,
   onMessagesChange,
+  onDeleteConversation,
+  isDeletingConversation = false,
 }: ChatPanelProps) {
   const { user, token } = useAuth();
   const { socket, onlineUsers, typingUsers } = useSocket();
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const otherParticipant = conversation.participants.find(
@@ -45,14 +51,25 @@ export default function ChatPanel({
   }, [messages, isTyping]);
 
   useEffect(() => {
+    if (!showActionsMenu) return;
+
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
+        setShowActionsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [showActionsMenu]);
+
+  useEffect(() => {
     if (!socket || !user || !otherParticipant) return;
 
-    if (conversation.unreadCount[user._id] > 0) {
+    if ((conversation.unreadCount?.[user._id] || 0) > 0) {
       api.markAsRead(token!, conversation._id);
-      socket.emit('markAsRead', {
-        conversationId: conversation._id,
-        userId: user._id,
-      });
     }
 
     const handleNewMessage = (msg: Message) => {
@@ -60,36 +77,15 @@ export default function ChatPanel({
         onMessagesChange([...messages, msg]);
         if (msg.sender._id !== user._id) {
           api.markAsRead(token!, conversation._id);
-          socket.emit('markAsRead', {
-            conversationId: conversation._id,
-            userId: user._id,
-          });
+          api.markAsRead(token!, conversation._id);
         }
       }
     };
 
-    const handleMessagesRead = ({
-      conversationId,
-      userId,
-    }: {
-      conversationId: string;
-      userId: string;
-    }) => {
-      if (conversationId === conversation._id && userId !== user._id) {
-        onMessagesChange(
-          messages.map((m) =>
-            m.sender._id === user._id ? { ...m, status: 'read' as const } : m
-          )
-        );
-      }
-    };
-
-    socket.on('newMessage', handleNewMessage);
-    socket.on('messagesRead', handleMessagesRead);
+    socket.on('messageReceived', handleNewMessage);
 
     return () => {
-      socket.off('newMessage', handleNewMessage);
-      socket.off('messagesRead', handleMessagesRead);
+      socket.off('messageReceived', handleNewMessage);
     };
   }, [socket, conversation._id, user, token, otherParticipant, messages, onMessagesChange]);
 
@@ -139,6 +135,14 @@ export default function ChatPanel({
     }
   };
 
+  const handleDeleteChat = async () => {
+    setShowActionsMenu(false);
+    if (!window.confirm('Delete this chat? This cannot be undone.')) {
+      return;
+    }
+    await onDeleteConversation(conversation._id);
+  };
+
   return (
     <div className="flex h-full flex-col bg-white">
       {/* Header */}
@@ -162,7 +166,7 @@ export default function ChatPanel({
               <h2 className="text-base font-semibold text-slate-900">
                 {otherParticipant.username}
               </h2>
-              {true && (
+              {otherParticipant.role !== 'customer' && (
                 <RoleBadge role={otherParticipant.role} />
               )}
             </div>
@@ -179,9 +183,31 @@ export default function ChatPanel({
           <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
             <Video className="h-4.5 w-4.5" />
           </button>
-          <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
-            <MoreVertical className="h-4.5 w-4.5" />
-          </button>
+          <div className="relative" ref={actionsMenuRef}>
+            <button
+              type="button"
+              onClick={() => setShowActionsMenu((prev) => !prev)}
+              className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+              aria-label="Conversation actions"
+              aria-expanded={showActionsMenu}
+            >
+              <MoreVertical className="h-4.5 w-4.5" />
+            </button>
+
+            {showActionsMenu && (
+              <div className="absolute right-0 top-11 z-30 w-44 rounded-md border border-gray-200 bg-white p-1.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={handleDeleteChat}
+                  disabled={isDeletingConversation}
+                  className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {isDeletingConversation ? 'Deleting...' : 'Delete chat'}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -206,7 +232,7 @@ export default function ChatPanel({
             />
           );
         })}
-        {isTyping && <TypingIndicator />}
+        {isTyping && <TypingIndicator usernames={typingUsers.get(conversation._id) || []} />}
         <div ref={messagesEndRef} />
       </div>
 
