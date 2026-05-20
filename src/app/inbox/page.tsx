@@ -41,13 +41,17 @@ export default function InboxPage() {
 
   const loadUsers = useCallback(async () => {
     if (!token) return;
+    if (user?.role !== 'admin') {
+      setUsers([]);
+      return;
+    }
     try {
       const data = await api.getUsers(token);
       setUsers(data);
     } catch (err) {
       console.error('Failed to load users:', err);
     }
-  }, [token]);
+  }, [token, user?.role]);
 
   const selectConversation = useCallback(async (conv: Conversation) => {
     if (!token) return;
@@ -61,6 +65,24 @@ export default function InboxPage() {
       setMessages([]);
     }
   }, [token]);
+
+  const handleConversationActivity = useCallback((conversationId: string, message: Message) => {
+    setConversations((prev) => {
+      const idx = prev.findIndex((conv) => conv._id === conversationId);
+      if (idx === -1) return prev;
+
+      const updatedConversation: Conversation = {
+        ...prev[idx],
+        lastMessage: message,
+        updatedAt: message.createdAt,
+      };
+
+      const next = [...prev];
+      next.splice(idx, 1);
+      next.unshift(updatedConversation);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -76,18 +98,47 @@ export default function InboxPage() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleConversationUpdated = ({ conversationId }: { conversationId: string }) => {
-      loadConversations();
-      if (activeConversation?._id === conversationId) {
-        api.getMessages(token!, conversationId).then(setMessages);
-      }
+    const handleConversationUpdated = ({
+      conversationId,
+      lastMessage,
+    }: {
+      conversationId: string;
+      lastMessage?: Message;
+    }) => {
+      if (!lastMessage) return;
+
+      setConversations((prev) => {
+        const idx = prev.findIndex((conv) => conv._id === conversationId);
+        if (idx === -1 || !user) return prev;
+
+        const current = prev[idx];
+        const isActiveConversation = activeConversation?._id === conversationId;
+        const isIncoming = lastMessage.sender._id !== user._id;
+
+        const nextUnreadCount = { ...current.unreadCount };
+        if (isIncoming && !isActiveConversation) {
+          nextUnreadCount[user._id] = (nextUnreadCount[user._id] || 0) + 1;
+        }
+
+        const updatedConversation: Conversation = {
+          ...current,
+          lastMessage,
+          unreadCount: nextUnreadCount,
+          updatedAt: lastMessage.createdAt,
+        };
+
+        const next = [...prev];
+        next.splice(idx, 1);
+        next.unshift(updatedConversation);
+        return next;
+      });
     };
 
     socket.on('conversationUpdated', handleConversationUpdated);
     return () => {
       socket.off('conversationUpdated', handleConversationUpdated);
     };
-  }, [socket, token, activeConversation, loadConversations]);
+  }, [socket, activeConversation?._id, user]);
 
   useEffect(() => {
     if (!socket || !activeConversation?._id) return;
@@ -142,6 +193,42 @@ export default function InboxPage() {
       setDeletingConversationId(null);
     }
   };
+
+  const handleConversationRead = useCallback((conversationId: string, readerId: string) => {
+    setConversations((prev) =>
+      prev.map((conv) => {
+        if (conv._id !== conversationId || !user) {
+          return conv;
+        }
+
+        if (readerId === user._id) {
+          return {
+            ...conv,
+            unreadCount: {
+              ...conv.unreadCount,
+              [user._id]: 0,
+            },
+          };
+        }
+
+        if (!conv.lastMessage) {
+          return conv;
+        }
+
+        if (conv.lastMessage.sender._id === user._id && readerId !== user._id && !conv.lastMessage.isRead) {
+          return {
+            ...conv,
+            lastMessage: {
+              ...conv.lastMessage,
+              isRead: true,
+            },
+          };
+        }
+
+        return conv;
+      })
+    );
+  }, [user]);
 
   if (isLoading || !user) {
     return (
@@ -271,6 +358,8 @@ export default function InboxPage() {
               conversation={activeConversation}
               messages={messages}
               onMessagesChange={setMessages}
+              onConversationActivity={handleConversationActivity}
+              onConversationRead={handleConversationRead}
               onDeleteConversation={handleDeleteConversation}
               isDeletingConversation={deletingConversationId === activeConversation._id}
             />

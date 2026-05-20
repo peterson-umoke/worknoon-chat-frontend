@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Conversation, Message } from '../lib/types';
@@ -13,7 +14,9 @@ import RoleBadge from './RoleBadge';
 interface ChatPanelProps {
   conversation: Conversation;
   messages: Message[];
-  onMessagesChange: (messages: Message[]) => void;
+  onMessagesChange: Dispatch<SetStateAction<Message[]>>;
+  onConversationActivity: (conversationId: string, message: Message) => void;
+  onConversationRead: (conversationId: string, readerId: string) => void;
   onDeleteConversation: (conversationId: string) => Promise<void>;
   isDeletingConversation?: boolean;
 }
@@ -22,6 +25,8 @@ export default function ChatPanel({
   conversation,
   messages,
   onMessagesChange,
+  onConversationActivity,
+  onConversationRead,
   onDeleteConversation,
   isDeletingConversation = false,
 }: ChatPanelProps) {
@@ -37,7 +42,7 @@ export default function ChatPanel({
   const otherParticipant = conversation.participants.find(
     (p) => p._id !== user?._id
   );
-  
+
   if (!otherParticipant) return null;
   const isOnline = onlineUsers.has(otherParticipant._id);
   const isTyping = typingUsers.has(conversation._id);
@@ -69,25 +74,50 @@ export default function ChatPanel({
     if (!socket || !user || !otherParticipant) return;
 
     if ((conversation.unreadCount?.[user._id] || 0) > 0) {
-      api.markAsRead(token!, conversation._id);
+      api.markAsRead(token!, conversation._id)
+        .then(() => onConversationRead(conversation._id, user._id))
+        .catch((err) => {
+          console.error('Failed to mark messages as read:', err);
+        });
     }
 
     const handleNewMessage = (msg: Message) => {
       if (msg.conversationId === conversation._id) {
-        onMessagesChange([...messages, msg]);
+        onMessagesChange((prev) => (prev.some((item) => item._id === msg._id) ? prev : [...prev, msg]));
+        onConversationActivity(conversation._id, msg);
         if (msg.sender._id !== user._id) {
-          api.markAsRead(token!, conversation._id);
-          api.markAsRead(token!, conversation._id);
+          api.markAsRead(token!, conversation._id)
+            .then(() => onConversationRead(conversation._id, user._id))
+            .catch((err) => {
+              console.error('Failed to mark messages as read:', err);
+            });
         }
       }
     };
 
+    const handleMessagesRead = ({ conversationId, readerId }: { conversationId: string; readerId: string }) => {
+      if (conversationId !== conversation._id) return;
+      if (readerId === user._id) return;
+
+      onMessagesChange((prev) =>
+        prev.map((msg) => {
+          if (msg.sender._id === user._id && !msg.isRead) {
+            return { ...msg, isRead: true };
+          }
+          return msg;
+        })
+      );
+      onConversationRead(conversationId, readerId);
+    };
+
     socket.on('messageReceived', handleNewMessage);
+    socket.on('messagesRead', handleMessagesRead);
 
     return () => {
       socket.off('messageReceived', handleNewMessage);
+      socket.off('messagesRead', handleMessagesRead);
     };
-  }, [socket, conversation._id, user, token, otherParticipant, messages, onMessagesChange]);
+  }, [socket, conversation._id, user, token, otherParticipant, onMessagesChange, onConversationActivity, onConversationRead]);
 
   const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
@@ -126,7 +156,8 @@ export default function ChatPanel({
 
     try {
       const msg = await api.sendMessage(token, { conversationId: conversation._id, content });
-      onMessagesChange([...messages, msg]);
+      onMessagesChange((prev) => (prev.some((item) => item._id === msg._id) ? prev : [...prev, msg]));
+      onConversationActivity(conversation._id, msg);
     } catch (err) {
       console.error('Failed to send message:', err);
       // Optional: Handle error by reverting UI or showing toast
