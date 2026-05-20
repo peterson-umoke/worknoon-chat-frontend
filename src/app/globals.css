@@ -57,6 +57,7 @@
 }
 
 @layer base {
+
   *,
   *::before,
   *::after {
@@ -64,6 +65,16 @@
     padding: 0;
     box-sizing: border-box;
   }
+}
+
+/* Typography tokens */
+:root {
+  --type-display-size: 28px;
+  --type-heading-size: 20px;
+  --type-body-size: 15px;
+  --type-small-size: 13px;
+  --leading-heading: 1.15;
+  --leading-body: 1.6;
 }
 
 html,
@@ -78,6 +89,39 @@ body {
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings use the same font as the body for consistency */
+h1,
+h2,
+h3 {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Slightly tighter spacing for forms to match the mock */
+.form-tight>*+* {
+  margin-top: 0.75rem;
+}
+
+/* Form inputs: always light surface (overrides dark theme) */
+.form-login input,
+.form-login textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px;
+}
+
+.form-login input::placeholder,
+.form-login textarea::placeholder {
+  color: rgba(100, 116, 139, 0.8) !important;
+}
+
+.form-login input:focus,
+.form-login textarea:focus {
+  border-color: hsl(250 80% 65%) !important;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1) !important;
+  outline: none !important;
 }
 
 /* Focus-visible for keyboard navigation */
