@@ -97,4 +97,11 @@ The UI uses a glassmorphism aesthetic with:
 
 ## Demo
 
-[Demo video walkthrough](#) — *Add your Loom/YouTube link here*
+> **Video walkthrough coming soon.** Record a 5-10 minute Loom/YouTube video covering:
+> 1. Running `npm install && npm run dev`
+> 2. Login flow (admin@worknoon.com)
+> 3. Real-time messaging between two accounts (open two browsers)
+> 4. Responsive mobile layout
+> 5. Profile page, role switching, admin dashboard
+>
+> Replace this block with: `[📺 Demo Video](https://your-link-here)`
