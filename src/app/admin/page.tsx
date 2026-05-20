@@ -8,7 +8,7 @@ import { User } from '../../lib/types';
 import * as api from '../../lib/api';
 import RoleBadge from '../../components/RoleBadge';
 import Sidebar from '../../components/Sidebar';
-import { Users, Activity, Shield } from 'lucide-react';
+import { Users, Activity, Shield, X } from 'lucide-react';
 
 export default function AdminPage() {
   const { user, token, isLoading } = useAuth();
@@ -17,6 +17,9 @@ export default function AdminPage() {
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRole, setSelectedRole] = useState<User['role']>('customer');
+  const [savingRole, setSavingRole] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -44,6 +47,26 @@ export default function AdminPage() {
     }
   };
 
+  const handleOpenUserSettings = (targetUser: User) => {
+    if (!user || targetUser._id === user._id) return;
+    setSelectedUser(targetUser);
+    setSelectedRole(targetUser.role);
+  };
+
+  const handleSaveRole = async () => {
+    if (!token || !selectedUser) return;
+    setSavingRole(true);
+    try {
+      const updated = await api.updateUserRole(token, selectedUser._id, selectedRole);
+      setAllUsers((prev) => prev.map((u) => (u._id === updated._id ? updated : u)));
+      setSelectedUser(updated);
+    } catch (err) {
+      console.error('Failed to update user role:', err);
+    } finally {
+      setSavingRole(false);
+    }
+  };
+
   if (isLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
@@ -60,6 +83,86 @@ export default function AdminPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
+      {selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-lg rounded-lg border border-gray-200 bg-white shadow-lg">
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h2 className="text-base font-semibold text-slate-900">User Profile Settings</h2>
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+                aria-label="Close user profile settings"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-5 px-5 py-5">
+              <div className="flex items-center gap-3">
+                <img
+                  src={selectedUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedUser.username}`}
+                  alt={selectedUser.username}
+                  className="h-12 w-12 rounded-full border border-gray-200 object-cover"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{selectedUser.username}</p>
+                  <p className="text-sm text-slate-500">{selectedUser.email}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Status</p>
+                  <p className={`mt-1 text-sm font-medium ${onlineUsers.has(selectedUser._id) ? 'text-green-600' : 'text-slate-500'}`}>
+                    {onlineUsers.has(selectedUser._id) ? 'Online' : 'Offline'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Last Active</p>
+                  <p className="mt-1 text-sm text-slate-700">
+                    {selectedUser.lastActive ? new Date(selectedUser.lastActive).toLocaleString() : 'Unknown'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="role-select" className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Role
+                </label>
+                <select
+                  id="role-select"
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value as User['role'])}
+                  className="mt-2 w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
+                >
+                  <option value="admin">admin</option>
+                  <option value="agent">agent</option>
+                  <option value="customer">customer</option>
+                  <option value="designer">designer</option>
+                  <option value="merchant">merchant</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveRole}
+                disabled={savingRole || selectedRole === selectedUser.role}
+                className="rounded-md bg-bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingRole ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex w-full h-full">
         <Sidebar />
 
@@ -112,8 +215,22 @@ export default function AdminPage() {
                 <div className="divide-y divide-gray-100">
                   {[user, ...allUsers].map((u) => {
                     const isOnline = onlineUsers.has(u._id);
+                    const isSelf = u._id === user._id;
                     return (
-                      <div key={u._id} className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-slate-50">
+                      <div
+                        key={u._id}
+                        className={`flex items-center gap-4 px-6 py-4 transition-colors ${isSelf ? 'hover:bg-slate-50' : 'cursor-pointer hover:bg-slate-50'}`}
+                        role={isSelf ? undefined : 'button'}
+                        tabIndex={isSelf ? -1 : 0}
+                        onClick={() => handleOpenUserSettings(u)}
+                        onKeyDown={(e) => {
+                          if (isSelf) return;
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleOpenUserSettings(u);
+                          }
+                        }}
+                      >
                         <div className="relative shrink-0">
                           <img
                             src={u.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${u.username}`}
@@ -135,6 +252,9 @@ export default function AdminPage() {
                           <span className={`text-xs font-medium ${isOnline ? 'text-green-600' : 'text-slate-400'}`}>
                             {isOnline ? 'Online' : 'Offline'}
                           </span>
+                          {!isSelf && (
+                            <p className="mt-1 text-[11px] text-slate-400">View settings</p>
+                          )}
                         </div>
                       </div>
                     );

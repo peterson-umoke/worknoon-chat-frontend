@@ -71,6 +71,14 @@ export async function getUsers(token: string): Promise<User[]> {
   return fetchApi<User[]>('/api/auth/users', authHeaders(token));
 }
 
+export async function updateUserRole(token: string, userId: string, role: User['role']): Promise<User> {
+  return fetchApi<User>(`/api/auth/users/${userId}/role`, {
+    method: 'PATCH',
+    ...authHeaders(token),
+    body: JSON.stringify({ role }),
+  });
+}
+
 // Conversations
 export async function createConversation(
   token: string,
