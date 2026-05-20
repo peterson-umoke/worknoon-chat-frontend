@@ -58,7 +58,7 @@ src/
 ### Prerequisites
 
 - Node.js 18+
-- Backend server running on port 5000
+- Backend server running on port 3001
 
 ### Installation
 
@@ -93,6 +93,7 @@ The UI uses a glassmorphism aesthetic with:
 - **Socket.IO + React state sync** — Managing real-time message delivery alongside REST API message history without duplicates.
 - **Responsive split-pane** — Desktop shows side-by-side layout; mobile uses an overlay drawer with smooth transitions.
 - **Type-safe API layer** — All 12 backend endpoints wrapped in typed functions with proper error handling and 401 auto-logout.
+- **Tailwind v4 CSS layer cascade** — The universal reset (`* { padding: 0 }`) was overriding utility classes because unlayered CSS takes precedence over `@layer utilities` in v4. Fixed by moving the reset into `@layer base`.
 
 ## Demo
 
