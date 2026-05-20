@@ -61,7 +61,7 @@ export default function ChatList({
               <span className="absolute inset-y-0 left-0 w-1 bg-bg-accent" />
             )}
 
-            <div className="relative flex-shrink-0">
+            <div className="relative shrink-0">
               <img
                 src={
                   otherParticipant.avatar ||
@@ -71,7 +71,7 @@ export default function ChatList({
                 className="h-10 w-10 rounded-full object-cover border border-slate-100 bg-white"
               />
               {isOnline && (
-                <span className="absolute -bottom-[2px] -right-[2px] block h-3 w-3 rounded-full border-2 border-white bg-green-500" />
+                <span className="absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white bg-green-500" />
               )}
             </div>
 
@@ -81,7 +81,7 @@ export default function ChatList({
                   {otherParticipant.username}
                 </p>
                 {conv.lastMessage && (
-                  <span className="flex-shrink-0 text-xs text-slate-400">
+                  <span className="shrink-0 text-xs text-slate-400">
                     {formatTime(conv.lastMessage.createdAt)}
                   </span>
                 )}
@@ -91,11 +91,11 @@ export default function ChatList({
                 {conv.lastMessage ? (
                   <>
                     {isFromMe && (
-                      <span className="flex-shrink-0 text-slate-400">
+                      <span className="shrink-0 text-slate-400">
                         {isRead ? (
-                          <CheckCheck className="h-[14px] w-[14px] text-blue-500" />
+                          <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
                         ) : (
-                          <Check className="h-[14px] w-[14px]" />
+                          <Check className="h-3.5 w-3.5" />
                         )}
                       </span>
                     )}
@@ -116,8 +116,8 @@ export default function ChatList({
             </div>
 
             {unreadCount > 0 && !isFromMe && (
-              <div className="flex-shrink-0">
-                <div className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-bg-accent px-1.5">
+              <div className="shrink-0">
+                <div className="flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-bg-accent px-1.5">
                   <span className="text-[10px] font-bold text-white">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>

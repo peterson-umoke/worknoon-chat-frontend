@@ -1,18 +1,18 @@
 'use client';
 
-export default function TypingIndicator({ usernames }: { usernames: string[] }) {
-  if (usernames.length === 0) return null;
-
-  const text = usernames.length === 1
-    ? `${usernames[0]} is typing`
-    : `${usernames.length} people are typing`;
-
+export default function TypingIndicator({ usernames = [] }: { usernames?: string[] }) {
   return (
-    <div className="flex items-center gap-1.5 px-4 py-2 text-text-muted text-xs">
-      <span className="typing-dot" />
-      <span className="typing-dot" />
-      <span className="typing-dot" />
-      <span className="ml-1 animate-pulse-slow">{text}</span>
+    <div className="flex items-center gap-2">
+      <div className="flex h-10 w-16 items-center justify-center gap-1 rounded-2xl bg-gray-100 px-4 py-2 text-gray-500 rounded-bl-sm">
+        <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.3s]"></span>
+        <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-current [animation-delay:-0.15s]"></span>
+        <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-current"></span>
+      </div>
+      {usernames.length > 0 && (
+        <span className="text-xs text-slate-400">
+          {usernames.join(', ')} {usernames.length === 1 ? 'is' : 'are'} typing...
+        </span>
+      )}
     </div>
   );
 }

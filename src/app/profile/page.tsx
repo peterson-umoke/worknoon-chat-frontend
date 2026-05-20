@@ -4,10 +4,11 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { Role } from '../../lib/types';
-import { Loader2, LogOut, ArrowLeft } from 'lucide-react';
+import Sidebar from '../../components/Sidebar';
+import { Loader2 } from 'lucide-react';
 
 export default function ProfilePage() {
-  const { user, token, logout, updateProfile, isLoading } = useAuth();
+  const { user, updateProfile, isLoading } = useAuth();
   const router = useRouter();
 
   const [username, setUsername] = useState('');
@@ -53,15 +54,10 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/login');
-  };
-
   if (isLoading || !user) {
     return (
-      <div className="flex h-screen items-center justify-center bg-bg-primary">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-bg-accent" />
+      <div className="flex h-screen items-center justify-center bg-slate-50">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-bg-accent" />
       </div>
     );
   }
@@ -75,130 +71,121 @@ export default function ProfilePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-bg-primary">
-      <div className="flex items-center justify-between border-b border-border px-8 py-5">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => router.push('/inbox')}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-bg-secondary hover:text-text-primary"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="text-xl font-semibold text-text-primary">Profile</h1>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm text-text-muted transition-colors hover:bg-bg-secondary hover:text-danger"
-        >
-          <LogOut className="h-4 w-4" />
-          Logout
-        </button>
-      </div>
+    <div className="flex h-screen overflow-hidden bg-slate-50">
+      <div className="flex w-full h-full">
+        <Sidebar />
 
-      <div className="mx-auto max-w-2xl px-8 py-12">
-        <div className="rounded-2xl border border-border-glass bg-bg-glass p-10 shadow-glass backdrop-blur-xl">
-          <div className="mb-10 flex flex-col items-center gap-5">
-            <img
-              src={avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`}
-              alt={username}
-              className="h-28 w-28 rounded-2xl object-cover shadow-md"
-            />
-            <div className="text-center">
-              <p className="text-lg font-semibold text-text-primary">{username}</p>
-              <p className="text-text-secondary text-sm">{email}</p>
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-2xl px-8 py-12">
+            <h1 className="mb-8 text-2xl font-semibold text-slate-900">Profile Settings</h1>
+
+            <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
+              <div className="mb-8 flex items-center gap-5">
+                <img
+                  src={avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${username}`}
+                  alt={username}
+                  className="h-20 w-20 rounded-md border border-gray-200 object-cover"
+                />
+                <div>
+                  <p className="text-lg font-medium text-slate-900">{username}</p>
+                  <p className="text-sm text-slate-500">{email}</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleSave} className="flex flex-col gap-5">
+                {error && (
+                  <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-600 border border-red-100">{error}</div>
+                )}
+                {success && (
+                  <div className="rounded-md bg-green-50 px-4 py-3 text-sm text-green-600 border border-green-100">{success}</div>
+                )}
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="avatarUrl" className="text-sm font-medium text-slate-700">Avatar URL</label>
+                  <input
+                    id="avatarUrl"
+                    type="text"
+                    value={avatar}
+                    onChange={(e) => setAvatar(e.target.value)}
+                    placeholder="https://example.com/avatar.jpg"
+                    className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-bg-accent focus:outline-none focus:ring-1 focus:ring-bg-accent/20"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="profileUsername" className="text-sm font-medium text-slate-700">Username</label>
+                  <input
+                    id="profileUsername"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-slate-900 focus:border-bg-accent focus:outline-none focus:ring-1 focus:ring-bg-accent/20"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="profileEmail" className="text-sm font-medium text-slate-700">Email</label>
+                  <input
+                    id="profileEmail"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-slate-900 focus:border-bg-accent focus:outline-none focus:ring-1 focus:ring-bg-accent/20"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="profileRole" className="text-sm font-medium text-slate-700">
+                    Role <span className="font-normal text-slate-400">(test perspectives)</span>
+                  </label>
+                  <select
+                    id="profileRole"
+                    value={role}
+                    onChange={(e) => setRole(e.target.value as Role)}
+                    className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-slate-900 focus:border-bg-accent focus:outline-none focus:ring-1 focus:ring-bg-accent/20"
+                  >
+                    {roles.map((r) => (
+                      <option key={r.value} value={r.value}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="newPassword" className="text-sm font-medium text-slate-700">
+                    New Password <span className="font-normal text-slate-400">(leave blank to keep current)</span>
+                  </label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    className="h-10 w-full rounded-md border border-gray-200 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-bg-accent focus:outline-none focus:ring-1 focus:ring-bg-accent/20"
+                  />
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="flex h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-md bg-bg-accent px-6 text-sm font-medium text-white transition-colors hover:bg-bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-
-          <form onSubmit={handleSave} className="flex flex-col gap-6">
-            {error && (
-              <div className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
-            )}
-            {success && (
-              <div className="rounded-lg bg-success/10 px-4 py-3 text-sm text-success">{success}</div>
-            )}
-
-            <div className="flex flex-col gap-2.5">
-              <label htmlFor="avatarUrl" className="text-sm font-medium text-text-secondary">Avatar URL</label>
-              <input
-                id="avatarUrl"
-                type="text"
-                value={avatar}
-                onChange={(e) => setAvatar(e.target.value)}
-                placeholder="https://example.com/avatar.jpg"
-                className="h-12 rounded-xl border border-border bg-bg-primary px-4 text-text-primary text-sm placeholder:text-text-muted focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <label htmlFor="profileUsername" className="text-sm font-medium text-text-secondary">Username</label>
-              <input
-                id="profileUsername"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="h-12 rounded-xl border border-border bg-bg-primary px-4 text-text-primary text-sm focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <label htmlFor="profileEmail" className="text-sm font-medium text-text-secondary">Email</label>
-              <input
-                id="profileEmail"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="h-12 rounded-xl border border-border bg-bg-primary px-4 text-text-primary text-sm focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <label htmlFor="profileRole" className="text-sm font-medium text-text-secondary">
-                Role <span className="text-text-muted">(switch to test different perspectives)</span>
-              </label>
-              <select
-                id="profileRole"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                className="h-12 rounded-xl border border-border bg-bg-primary px-4 text-text-primary text-sm focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
-              >
-                {roles.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-2.5">
-              <label htmlFor="newPassword" className="text-sm font-medium text-text-secondary">
-                New Password <span className="text-text-muted">(leave blank to keep current)</span>
-              </label>
-              <input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-                className="h-12 rounded-xl border border-border bg-bg-primary px-4 text-text-primary text-sm placeholder:text-text-muted focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="mt-2 flex h-12 items-center justify-center gap-2 rounded-xl bg-bg-accent text-text-on-accent font-medium transition-colors hover:bg-bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save Changes'
-              )}
-            </button>
-          </form>
-        </div>
+        </main>
       </div>
     </div>
   );

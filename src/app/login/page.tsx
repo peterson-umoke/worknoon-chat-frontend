@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '../../context/AuthContext';
 import { MessageCircle, Loader2, Calendar, Clock, Menu, MessageSquare } from 'lucide-react';
 
@@ -34,18 +35,18 @@ export default function LoginPage() {
         <div className="rounded-md bg-white shadow-md border border-border-glass overflow-hidden">
           <div className="flex">
             {/* Left icon rail */}
-            <aside className="hidden md:flex w-[60px] flex-col items-center gap-1 py-6 border-r border-gray-100 bg-white">
-              <div className="relative w-full flex items-center justify-center py-3 text-bg-accent before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-[3px] before:rounded-r before:bg-bg-accent">
-                <MessageCircle className="h-[18px] w-[18px]" />
+            <aside className="hidden md:flex w-15 flex-col items-center gap-1 py-6 border-r border-gray-100 bg-white">
+              <div className="relative w-full flex items-center justify-center py-3 text-bg-accent before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-5 before:w-0.75 before:rounded-r before:bg-bg-accent">
+                <MessageCircle className="h-4.5 w-4.5" />
               </div>
               <div className="w-full flex items-center justify-center py-3 text-slate-400 hover:text-slate-600">
-                <Calendar className="h-[18px] w-[18px]" />
+                <Calendar className="h-4.5 w-4.5" />
               </div>
               <div className="w-full flex items-center justify-center py-3 text-slate-400 hover:text-slate-600">
-                <MessageSquare className="h-[18px] w-[18px]" />
+                <MessageSquare className="h-4.5 w-4.5" />
               </div>
               <div className="w-full flex items-center justify-center py-3 text-slate-400 hover:text-slate-600">
-                <Clock className="h-[18px] w-[18px]" />
+                <Clock className="h-4.5 w-4.5" />
               </div>
             </aside>
 
@@ -55,20 +56,20 @@ export default function LoginPage() {
                 <div className="text-xs font-medium text-slate-400 uppercase tracking-widest mb-3">Worknoon Chat</div>
                 <p className="text-slate-700 text-sm leading-relaxed max-w-xs">Manage real-time conversations with your customers — all in one place.</p>
                 <ul className="mt-8 flex flex-col gap-3">
-                  <li className="flex items-center gap-2 text-sm text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-bg-accent flex-shrink-0" />Live conversations</li>
-                  <li className="flex items-center gap-2 text-sm text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-bg-accent flex-shrink-0" />Role-based access</li>
-                  <li className="flex items-center gap-2 text-sm text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-bg-accent flex-shrink-0" />WooCommerce integration</li>
+                  <li className="flex items-center gap-2 text-sm text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-bg-accent shrink-0" />Live conversations</li>
+                  <li className="flex items-center gap-2 text-sm text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-bg-accent shrink-0" />Role-based access</li>
+                  <li className="flex items-center gap-2 text-sm text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-bg-accent shrink-0" />WooCommerce integration</li>
                 </ul>
               </div>
 
-                <div className="flex items-center justify-center px-8 py-10">
+              <div className="flex items-center justify-center px-8 py-10">
                 <div className="w-full max-w-md">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-bg-accent">
                       <MessageCircle className="h-4 w-4 text-white" />
                     </div>
                     <div>
-                      <h1 className="text-base font-semibold text-slate-800 leading-tight" style={{fontSize:'16px'}}>Sign in to Worknoon Chat</h1>
+                      <h1 className="text-base font-semibold text-slate-800 leading-tight" style={{ fontSize: '16px' }}>Sign in to Worknoon Chat</h1>
                     </div>
                   </div>
 
@@ -132,6 +133,12 @@ export default function LoginPage() {
                   <div className="mt-4 text-xs text-text-muted text-center">
                     Test accounts: admin@worknoon.com · Password: <span className="font-mono">Password123!</span>
                   </div>
+                  <p className="mt-3 text-sm text-center text-slate-500">
+                    Need an account?{' '}
+                    <Link href="/signup" className="font-medium text-bg-accent hover:underline">
+                      Create one
+                    </Link>
+                  </p>
                 </div>
               </div>
             </div>

@@ -26,7 +26,7 @@ export default function ChatPanel({
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const otherParticipant = conversation.participants.find(
     (p) => p._id !== user?._id
@@ -47,7 +47,7 @@ export default function ChatPanel({
   useEffect(() => {
     if (!socket || !user || !otherParticipant) return;
 
-    if (conversation.unreadCounts[user._id] > 0) {
+    if (conversation.unreadCount[user._id] > 0) {
       api.markAsRead(token!, conversation._id);
       socket.emit('markAsRead', {
         conversationId: conversation._id,
@@ -58,7 +58,7 @@ export default function ChatPanel({
     const handleNewMessage = (msg: Message) => {
       if (msg.conversationId === conversation._id) {
         onMessagesChange([...messages, msg]);
-        if (msg.senderId !== user._id) {
+        if (msg.sender._id !== user._id) {
           api.markAsRead(token!, conversation._id);
           socket.emit('markAsRead', {
             conversationId: conversation._id,
@@ -78,7 +78,7 @@ export default function ChatPanel({
       if (conversationId === conversation._id && userId !== user._id) {
         onMessagesChange(
           messages.map((m) =>
-            m.senderId === user._id ? { ...m, status: 'read' as const } : m
+            m.sender._id === user._id ? { ...m, status: 'read' as const } : m
           )
         );
       }
@@ -129,7 +129,7 @@ export default function ChatPanel({
     }
 
     try {
-      const msg = await api.sendMessage(token, conversation._id, content);
+      const msg = await api.sendMessage(token, { conversationId: conversation._id, content });
       onMessagesChange([...messages, msg]);
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -142,9 +142,9 @@ export default function ChatPanel({
   return (
     <div className="flex h-full flex-col bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-white/95 backdrop-blur supports-backdrop-filter:bg-white/60">
         <div className="flex items-center gap-4">
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <img
               src={
                 otherParticipant.avatar ||
@@ -154,7 +154,7 @@ export default function ChatPanel({
               className="h-10 w-10 rounded-full object-cover border border-slate-100"
             />
             {isOnline && (
-              <span className="absolute -bottom-[2px] -right-[2px] block h-3 w-3 rounded-full border-2 border-white bg-green-500" />
+              <span className="absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white bg-green-500" />
             )}
           </div>
           <div>
@@ -162,7 +162,7 @@ export default function ChatPanel({
               <h2 className="text-base font-semibold text-slate-900">
                 {otherParticipant.username}
               </h2>
-              {otherParticipant.role !== 'user' && (
+              {true && (
                 <RoleBadge role={otherParticipant.role} />
               )}
             </div>
@@ -174,13 +174,13 @@ export default function ChatPanel({
 
         <div className="flex items-center gap-2">
           <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
-            <Phone className="h-[18px] w-[18px]" />
+            <Phone className="h-4.5 w-4.5" />
           </button>
           <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
-            <Video className="h-[18px] w-[18px]" />
+            <Video className="h-4.5 w-4.5" />
           </button>
           <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
-            <MoreVertical className="h-[18px] w-[18px]" />
+            <MoreVertical className="h-4.5 w-4.5" />
           </button>
         </div>
       </div>
@@ -190,16 +190,16 @@ export default function ChatPanel({
         {messages.map((msg, idx) => {
           const showAvatar =
             idx === messages.length - 1 ||
-            messages[idx + 1].senderId !== msg.senderId;
+            messages[idx + 1].sender._id !== msg.sender._id;
 
           return (
             <MessageBubble
               key={msg._id}
               message={msg}
-              isOwn={msg.senderId === user?._id}
+              isOwn={msg.sender._id === user?._id}
               showAvatar={showAvatar}
               senderFallback={
-                msg.senderId === otherParticipant._id
+                msg.sender._id === otherParticipant._id
                   ? otherParticipant
                   : undefined
               }
@@ -218,13 +218,13 @@ export default function ChatPanel({
         >
           <button
             type="button"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
           >
             <Paperclip className="h-5 w-5" />
           </button>
           <button
             type="button"
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
           >
             <ImageIcon className="h-5 w-5" />
           </button>
@@ -238,7 +238,7 @@ export default function ChatPanel({
           <button
             type="submit"
             disabled={!newMessage.trim() || isSending}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-bg-accent text-white transition-colors hover:bg-bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-bg-accent text-white transition-colors hover:bg-bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send className="h-4 w-4" />
           </button>

@@ -6,12 +6,13 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
 import ChatList from '../../components/ChatList';
 import ChatPanel from '../../components/ChatPanel';
-import { Conversation, Message, User } from '../../lib/types';
+import Sidebar from '../../components/Sidebar';
+import { Conversation, Message } from '../../lib/types';
 import * as api from '../../lib/api';
-import { Search, LogOut, MessageCircle, Menu, X, Users, Plus, MessageSquare, Calendar, Clock, Edit } from 'lucide-react';
+import { Search, Menu, X, MessageSquare, Edit } from 'lucide-react';
 
 export default function InboxPage() {
-  const { user, token, logout, isLoading } = useAuth();
+  const { user, token, isLoading } = useAuth();
   const { socket, onlineUsers } = useSocket();
   const router = useRouter();
 
@@ -19,7 +20,6 @@ export default function InboxPage() {
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -68,11 +68,6 @@ export default function InboxPage() {
     setMobileSidebarOpen(false);
   };
 
-  const handleLogout = () => {
-    logout();
-    router.replace('/login');
-  };
-
   if (isLoading || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
@@ -90,49 +85,14 @@ export default function InboxPage() {
         />
       )}
 
-      {/* Main Container - matching the exact Uncodixfy dashboard pattern */}
+      {/* Main Container */}
       <div className="flex w-full h-full">
-        {/* Left Icon Rail */}
-        <aside className="hidden md:flex w-[70px] flex-col items-center gap-2 py-6 border-r border-gray-100 bg-white z-10 flex-shrink-0">
-          <div className="flex h-10 w-10 items-center justify-center mb-6">
-            <MessageCircle className="h-7 w-7 text-bg-accent" />
-          </div>
-          <div className="relative w-full flex items-center justify-center py-3 text-bg-accent before:absolute before:left-0 before:top-1/2 before:-translate-y-1/2 before:h-6 before:w-[3px] before:rounded-r before:bg-bg-accent cursor-pointer">
-            <MessageSquare className="h-5 w-5" fill="currentColor" opacity={0.2} />
-            <MessageSquare className="h-5 w-5 absolute" />
-          </div>
-          <div className="w-full flex items-center justify-center py-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
-            <Calendar className="h-5 w-5" />
-          </div>
-          <div className="w-full flex items-center justify-center py-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
-            <Users className="h-5 w-5" />
-          </div>
-          <div className="w-full flex items-center justify-center py-3 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors">
-            <Clock className="h-5 w-5" />
-          </div>
-          <div className="mt-auto w-full flex flex-col items-center gap-6">
-            <button
-              onClick={handleLogout}
-              className="text-slate-400 hover:text-red-500 transition-colors"
-              title="Logout"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
-            <div className="h-9 w-9 rounded-full border border-gray-200 overflow-hidden cursor-pointer pt-[2px]">
-              <img
-                src={user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
-                alt={user.username}
-                className="h-full w-full object-cover"
-              />
-            </div>
-          </div>
-        </aside>
+        <Sidebar />
 
         {/* Chat List Column */}
         <aside
-          className={`fixed inset-y-0 left-0 z-50 flex w-[340px] flex-col border-r border-gray-100 bg-white transition-transform lg:relative lg:translate-x-0 ${
-            mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } ${sidebarOpen ? 'lg:w-[340px]' : 'lg:w-0 lg:overflow-hidden lg:border-0'}`}
+          className={`fixed inset-y-0 left-0 z-50 flex w-85 flex-col border-r border-gray-100 bg-white transition-transform lg:relative lg:z-20 lg:translate-x-0 ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            } lg:w-85`}
         >
           <div className="flex items-center justify-between px-6 pt-7 pb-5">
             <div className="flex items-center gap-3">
@@ -212,14 +172,14 @@ export default function InboxPage() {
                     onClick={() => setMobileSidebarOpen(true)}
                     className="flex h-10 items-center gap-2 rounded-lg bg-bg-accent px-5 text-white text-[15px] font-medium transition-colors hover:bg-bg-accent-hover lg:hidden"
                   >
-                    <Menu className="h-[18px] w-[18px]" />
+                    <Menu className="h-4.5 w-4.5" />
                     Open Inbox
                   </button>
                   <button
                     onClick={() => router.push('/profile')}
                     className="flex h-10 items-center gap-2 rounded-lg border border-gray-200 bg-white px-5 text-[15px] font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-900 shadow-sm"
                   >
-                    <Edit className="h-[18px] w-[18px]" />
+                    <Edit className="h-4.5 w-4.5" />
                     New Message
                   </button>
                 </div>
