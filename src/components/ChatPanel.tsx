@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import MessageBubble from './MessageBubble';
 import ProductContextCard from './ProductContextCard';
 import TypingIndicator from './TypingIndicator';
-import { Send, Paperclip, Loader2, X } from 'lucide-react';
+import { Send, Paperclip, Loader2 } from 'lucide-react';
 import * as api from '../lib/api';
 
 interface ChatPanelProps {
@@ -120,23 +120,22 @@ export default function ChatPanel({ conversation, messages, onMessagesChange }: 
 
   return (
     <div className="flex h-full flex-col bg-bg-primary">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-border px-5 py-3">
+      <div className="flex items-center gap-4 border-b border-border px-6 py-4">
         {otherParticipants.map((p) => (
           <div key={p._id} className="flex items-center gap-3 flex-1 min-w-0">
             <div className="relative flex-shrink-0">
               <img
                 src={p.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.username}`}
                 alt={p.username}
-                className="h-10 w-10 rounded-full object-cover"
+                className="h-11 w-11 rounded-full object-cover"
               />
               {isConnected && (
                 <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full border-2 border-bg-primary bg-online" />
               )}
             </div>
             <div className="min-w-0">
-              <p className="truncate font-medium text-text-primary text-sm">{p.username}</p>
-              <p className="text-text-muted text-xs">
+              <p className="truncate font-medium text-text-primary">{p.username}</p>
+              <p className="text-text-muted text-sm">
                 {isConnected ? 'Online' : 'Offline'}
               </p>
             </div>
@@ -145,9 +144,8 @@ export default function ChatPanel({ conversation, messages, onMessagesChange }: 
         <ProductContextCard context={conversation.context} />
       </div>
 
-      {/* Messages */}
-      <div className="chat-scroll-container flex-1 overflow-y-auto px-5 py-4">
-        <div className="flex flex-col gap-3">
+      <div className="chat-scroll-container flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex flex-col gap-4">
           {messages.map((msg) => (
             <MessageBubble key={msg._id} message={msg} isOwn={msg.sender._id === user?._id} />
           ))}
@@ -155,11 +153,9 @@ export default function ChatPanel({ conversation, messages, onMessagesChange }: 
         </div>
       </div>
 
-      {/* Typing indicator */}
       <TypingIndicator usernames={currentTyping} />
 
-      {/* Input */}
-      <form onSubmit={handleSend} className="flex items-center gap-2 border-t border-border px-5 py-3">
+      <form onSubmit={handleSend} className="flex items-center gap-3 border-t border-border px-6 py-4">
         <input
           ref={fileInputRef}
           type="file"
@@ -171,7 +167,7 @@ export default function ChatPanel({ conversation, messages, onMessagesChange }: 
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploadingFile}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-bg-secondary hover:text-text-primary disabled:opacity-50"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-bg-secondary hover:text-text-primary disabled:opacity-50"
         >
           {uploadingFile ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -185,12 +181,12 @@ export default function ChatPanel({ conversation, messages, onMessagesChange }: 
           value={input}
           onChange={handleInputChange}
           placeholder="Type a message..."
-          className="flex-1 h-10 rounded-xl border border-border bg-bg-secondary px-4 text-text-primary text-sm placeholder:text-text-muted focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
+          className="flex-1 h-11 rounded-xl border border-border bg-bg-secondary px-4 text-text-primary text-sm placeholder:text-text-muted focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
         />
         <button
           type="submit"
           disabled={!input.trim() || isSending}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-bg-accent text-text-on-accent transition-colors hover:bg-bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-bg-accent text-text-on-accent transition-colors hover:bg-bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSending ? (
             <Loader2 className="h-5 w-5 animate-spin" />

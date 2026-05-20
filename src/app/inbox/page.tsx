@@ -8,7 +8,7 @@ import ChatList from '../../components/ChatList';
 import ChatPanel from '../../components/ChatPanel';
 import { Conversation, Message, User } from '../../lib/types';
 import * as api from '../../lib/api';
-import { Search, LogOut, MessageCircle, Menu, X, Users } from 'lucide-react';
+import { Search, LogOut, MessageCircle, Menu, X, Users, Plus } from 'lucide-react';
 
 export default function InboxPage() {
   const { user, token, logout, isLoading } = useAuth();
@@ -95,9 +95,9 @@ export default function InboxPage() {
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         } ${sidebarOpen ? 'lg:w-80' : 'lg:w-0 lg:overflow-hidden lg:border-0'}`}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-bg-accent">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-bg-accent">
               <MessageCircle className="h-5 w-5 text-text-on-accent" />
             </div>
             <span className="font-semibold text-text-primary">Inbox</span>
@@ -105,13 +105,13 @@ export default function InboxPage() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => setMobileSidebarOpen(false)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-bg-primary lg:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-bg-primary lg:hidden"
             >
               <X className="h-4 w-4" />
             </button>
             <button
               onClick={handleLogout}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted hover:bg-bg-primary hover:text-danger"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-bg-primary hover:text-danger"
               title="Logout"
             >
               <LogOut className="h-4 w-4" />
@@ -119,22 +119,22 @@ export default function InboxPage() {
           </div>
         </div>
 
-        <div className="px-4 py-3">
+        <div className="px-5 py-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full rounded-xl border border-border bg-bg-primary py-2.5 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
+              className="w-full rounded-xl border border-border bg-bg-primary py-3 pl-10 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-16">
+            <div className="flex items-center justify-center py-20">
               <div className="h-6 w-6 animate-spin rounded-full border-3 border-border border-t-bg-accent" />
             </div>
           ) : (
@@ -149,11 +149,11 @@ export default function InboxPage() {
           )}
         </div>
 
-        <div className="flex items-center gap-3 border-t border-border px-4 py-3">
+        <div className="flex items-center gap-3 border-t border-border px-5 py-4">
           <img
             src={user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
             alt={user.username}
-            className="h-9 w-9 rounded-full object-cover"
+            className="h-10 w-10 rounded-full object-cover"
           />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium text-text-primary">{user.username}</p>
@@ -171,21 +171,30 @@ export default function InboxPage() {
           />
         ) : (
           <div className="flex flex-1 items-center justify-center">
-            <div className="flex flex-col items-center gap-4 text-text-muted">
-              <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-bg-secondary">
-                <Users className="h-10 w-10 opacity-40" />
+            <div className="flex flex-col items-center gap-6 text-text-muted">
+              <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-bg-secondary">
+                <Users className="h-12 w-12 opacity-40" />
               </div>
               <div className="text-center">
-                <p className="font-medium text-text-primary">Select a conversation</p>
-                <p className="text-sm">Choose from your conversations on the left</p>
+                <p className="text-lg font-medium text-text-primary">Select a conversation</p>
+                <p className="text-sm text-text-secondary mt-1">Choose from your conversations on the left</p>
               </div>
-              <button
-                onClick={() => setMobileSidebarOpen(true)}
-                className="mt-2 flex h-10 items-center gap-2 rounded-xl bg-bg-accent px-5 text-text-on-accent text-sm font-medium transition-colors hover:bg-bg-accent-hover lg:hidden"
-              >
-                <Menu className="h-4 w-4" />
-                Open Inbox
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setMobileSidebarOpen(true)}
+                  className="flex h-11 items-center gap-2 rounded-xl bg-bg-accent px-5 text-text-on-accent text-sm font-medium transition-colors hover:bg-bg-accent-hover lg:hidden"
+                >
+                  <Menu className="h-4 w-4" />
+                  Open Inbox
+                </button>
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="flex h-11 items-center gap-2 rounded-xl border border-border px-5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-secondary"
+                >
+                  <Plus className="h-4 w-4" />
+                  Start Conversation
+                </button>
+              </div>
             </div>
           </div>
         )}
