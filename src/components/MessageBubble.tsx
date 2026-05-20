@@ -1,58 +1,104 @@
-'use client';
+import { Message } from '../lib/types';
+import { formatTime } from '../lib/utils';
+import { Check, CheckCheck } from 'lucide-react';
+import ProductContextCard from './ProductContextCard';
 
-import { Message, User } from '../lib/types';
-import RoleBadge from './RoleBadge';
-
-function formatTime(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+interface MessageBubbleProps {
+  message: Message;
+  isOwn: boolean;
+  showAvatar?: boolean;
+  senderFallback?: { username: string; avatar?: string };
 }
 
-export default function MessageBubble({ message, isOwn }: { message: Message; isOwn: boolean }) {
+export default function MessageBubble({
+  message,
+  isOwn,
+  showAvatar = true,
+  senderFallback,
+}: MessageBubbleProps) {
+  const isRead = message.status === 'read';
+
   return (
-    <div className={`flex gap-2.5 ${isOwn ? 'flex-row-reverse' : ''} animate-fade-in`}>
-      <img
-        src={message.sender.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${message.sender.username}`}
-        alt={message.sender.username}
-        className="mt-1 h-8 w-8 flex-shrink-0 rounded-full object-cover"
-      />
-      <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-        {!isOwn && (
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-text-secondary text-xs font-medium">{message.sender.username}</span>
-            <RoleBadge role={message.sender.role} />
-          </div>
-        )}
-        <div
-          className={`rounded-2xl px-4 py-2.5 text-sm ${
-            isOwn
-              ? 'rounded-br-md bg-bg-accent text-text-on-accent'
-              : 'rounded-bl-md border border-border-glass bg-bg-glass text-text-primary'
-          }`}
-        >
-          {message.fileType === 'image' ? (
+    <div
+      className={`flex w-full items-end gap-2 ${
+        isOwn ? 'justify-end' : 'justify-start'
+      }`}
+    >
+      {!isOwn && (
+        <div className="w-8 flex-shrink-0">
+          {showAvatar && senderFallback && (
             <img
-              src={message.content}
-              alt="Shared image"
-              className="max-h-64 max-w-full rounded-lg object-cover"
+              src={
+                senderFallback.avatar ||
+                `https://api.dicebear.com/7.x/bottts/svg?seed=${senderFallback.username}`
+              }
+              alt={senderFallback.username}
+              className="mb-1 h-8 w-8 rounded-full object-cover border border-slate-100"
             />
-          ) : message.fileType === 'document' ? (
-            <a
-              href={message.content}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-bg-accent hover:underline"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-              </svg>
-              {message.content.split('/').pop()}
-            </a>
-          ) : (
-            <p className="whitespace-pre-wrap break-words">{message.content}</p>
           )}
         </div>
-        <span className="px-1 text-text-muted text-[10px]">{formatTime(message.createdAt)}</span>
+      )}
+
+      <div
+        className={`flex max-w-[75%] flex-col ${
+          isOwn ? 'items-end' : 'items-start'
+        }`}
+      >
+        {!isOwn && showAvatar && senderFallback && (
+          <span className="mb-1 ml-1 text-xs font-medium text-slate-500">
+            {senderFallback.username}
+          </span>
+        )}
+
+        <div className="space-y-1">
+          {message.metadata?.productContext && (
+            <ProductContextCard context={message.metadata.productContext} />
+          )}
+
+          {message.type === 'image' && message.attachmentUrl ? (
+            <div className={`overflow-hidden rounded-md border text-sm ${isOwn ? 'border-bg-accent bg-bg-accent/5' : 'border-gray-200 bg-white'}`}>
+              <img
+                src={message.attachmentUrl}
+                alt="Attachment"
+                className="max-h-64 max-w-full rounded-t-md object-cover"
+              />
+              {message.content && (
+                <div className="p-3">
+                  <p className="text-slate-900">{message.content}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div
+              className={`rounded-md px-4 py-2.5 text-sm ${
+                isOwn
+                  ? 'bg-bg-accent text-white'
+                  : 'border border-gray-200 bg-white text-slate-900'
+              }`}
+            >
+              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+            </div>
+          )}
+        </div>
+
+        <div
+          className={`mt-1 flex items-center gap-1 ${
+            isOwn ? 'justify-end' : 'justify-start'
+          }`}
+        >
+          <span className="text-[11px] text-slate-400">
+            {formatTime(message.createdAt)}
+          </span>
+          {isOwn && (
+            <span className="text-slate-400">
+              {isRead ? (
+                <CheckCheck className="h-[14px] w-[14px] text-blue-500" />
+              ) : (
+                <Check className="h-[14px] w-[14px]" />
+              )}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

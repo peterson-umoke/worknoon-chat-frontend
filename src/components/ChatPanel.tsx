@@ -1,200 +1,249 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback, FormEvent } from 'react';
-import { Conversation, User, Message } from '../lib/types';
-import { useSocket } from '../context/SocketContext';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import MessageBubble from './MessageBubble';
-import ProductContextCard from './ProductContextCard';
-import TypingIndicator from './TypingIndicator';
-import { Send, Paperclip, Loader2 } from 'lucide-react';
+import { useSocket } from '../context/SocketContext';
+import { Conversation, Message } from '../lib/types';
 import * as api from '../lib/api';
+import MessageBubble from './MessageBubble';
+import TypingIndicator from './TypingIndicator';
+import { Send, Phone, Video, MoreVertical, Image as ImageIcon, Paperclip } from 'lucide-react';
+import RoleBadge from './RoleBadge';
 
 interface ChatPanelProps {
   conversation: Conversation;
   messages: Message[];
-  onMessagesChange: (msgs: Message[]) => void;
+  onMessagesChange: (messages: Message[]) => void;
 }
 
-export default function ChatPanel({ conversation, messages, onMessagesChange }: ChatPanelProps) {
+export default function ChatPanel({
+  conversation,
+  messages,
+  onMessagesChange,
+}: ChatPanelProps) {
   const { user, token } = useAuth();
-  const { socket, sendMessage, joinRoom, leaveRoom, startTyping, stopTyping, typingUsers, isConnected } = useSocket();
-  const [input, setInput] = useState('');
+  const { socket, onlineUsers, typingUsers } = useSocket();
+  const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [uploadingFile, setUploadingFile] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const typingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const otherParticipants = conversation.participants.filter((p) => p._id !== user?._id);
-  const currentTyping = typingUsers.get(conversation._id) || [];
+  const otherParticipant = conversation.participants.find(
+    (p) => p._id !== user?._id
+  );
+  
+  if (!otherParticipant) return null;
+  const isOnline = onlineUsers.has(otherParticipant._id);
+  const isTyping = typingUsers.has(conversation._id);
 
-  useEffect(() => {
-    joinRoom(conversation._id);
-    return () => leaveRoom(conversation._id);
-  }, [conversation._id, joinRoom, leaveRoom]);
-
-  useEffect(() => {
+  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  };
 
-  const loadMessages = useCallback(async () => {
-    if (!token) return;
-    try {
-      const msgs = await api.getMessages(token, conversation._id);
-      onMessagesChange(msgs);
-      await api.markAsRead(token, conversation._id);
-    } catch (err) {
-      console.error('Failed to load messages:', err);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
+
+  useEffect(() => {
+    if (!socket || !user || !otherParticipant) return;
+
+    if (conversation.unreadCounts[user._id] > 0) {
+      api.markAsRead(token!, conversation._id);
+      socket.emit('markAsRead', {
+        conversationId: conversation._id,
+        userId: user._id,
+      });
     }
-  }, [token, conversation._id, onMessagesChange]);
 
-  useEffect(() => {
-    loadMessages();
-  }, [loadMessages]);
-
-  useEffect(() => {
-    if (!socket || !token) return;
-
-    const handleMessage = (msg: Message) => {
+    const handleNewMessage = (msg: Message) => {
       if (msg.conversationId === conversation._id) {
         onMessagesChange([...messages, msg]);
+        if (msg.senderId !== user._id) {
+          api.markAsRead(token!, conversation._id);
+          socket.emit('markAsRead', {
+            conversationId: conversation._id,
+            userId: user._id,
+          });
+        }
       }
     };
 
-    socket.on('messageReceived', handleMessage);
-    return () => {
-      socket.off('messageReceived', handleMessage);
+    const handleMessagesRead = ({
+      conversationId,
+      userId,
+    }: {
+      conversationId: string;
+      userId: string;
+    }) => {
+      if (conversationId === conversation._id && userId !== user._id) {
+        onMessagesChange(
+          messages.map((m) =>
+            m.senderId === user._id ? { ...m, status: 'read' as const } : m
+          )
+        );
+      }
     };
-  }, [socket, token, conversation._id, onMessagesChange]);
 
-  const handleSend = async (e?: FormEvent) => {
-    e?.preventDefault();
-    if (!input.trim() || !token || isSending) return;
+    socket.on('newMessage', handleNewMessage);
+    socket.on('messagesRead', handleMessagesRead);
 
+    return () => {
+      socket.off('newMessage', handleNewMessage);
+      socket.off('messagesRead', handleMessagesRead);
+    };
+  }, [socket, conversation._id, user, token, otherParticipant, messages, onMessagesChange]);
+
+  const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+
+    if (socket && user) {
+      socket.emit('typing', { conversationId: conversation._id, userId: user._id });
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit('stopTyping', {
+          conversationId: conversation._id,
+          userId: user._id,
+        });
+      }, 2000);
+    }
+  };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || !user || !token) return;
+
+    const content = newMessage.trim();
+    setNewMessage('');
     setIsSending(true);
-    const content = input.trim();
-    setInput('');
+
+    if (socket && typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      socket.emit('stopTyping', {
+        conversationId: conversation._id,
+        userId: user._id,
+      });
+    }
 
     try {
-      await api.sendMessage(token, { conversationId: conversation._id, content });
-      stopTyping(conversation._id);
+      const msg = await api.sendMessage(token, conversation._id, content);
+      onMessagesChange([...messages, msg]);
     } catch (err) {
       console.error('Failed to send message:', err);
+      // Optional: Handle error by reverting UI or showing toast
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !token) return;
-
-    setUploadingFile(true);
-    try {
-      const result = await api.uploadFile(token, file);
-      await api.sendMessage(token, {
-        conversationId: conversation._id,
-        content: result.url,
-        fileType: result.fileType,
-      });
-    } catch (err) {
-      console.error('Failed to upload file:', err);
-    } finally {
-      setUploadingFile(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-    startTyping(conversation._id);
-
-    typingTimerRef.current = setTimeout(() => {
-      stopTyping(conversation._id);
-    }, 2000);
-  };
-
   return (
-    <div className="flex h-full flex-col bg-bg-primary">
-      <div className="flex items-center gap-4 border-b border-border px-6 py-4">
-        {otherParticipants.map((p) => (
-          <div key={p._id} className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="relative flex-shrink-0">
-              <img
-                src={p.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.username}`}
-                alt={p.username}
-                className="h-11 w-11 rounded-full object-cover"
-              />
-              {isConnected && (
-                <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full border-2 border-bg-primary bg-online" />
+    <div className="flex h-full flex-col bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="flex items-center gap-4">
+          <div className="relative flex-shrink-0">
+            <img
+              src={
+                otherParticipant.avatar ||
+                `https://api.dicebear.com/7.x/bottts/svg?seed=${otherParticipant.username}`
+              }
+              alt={otherParticipant.username}
+              className="h-10 w-10 rounded-full object-cover border border-slate-100"
+            />
+            {isOnline && (
+              <span className="absolute -bottom-[2px] -right-[2px] block h-3 w-3 rounded-full border-2 border-white bg-green-500" />
+            )}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold text-slate-900">
+                {otherParticipant.username}
+              </h2>
+              {otherParticipant.role !== 'user' && (
+                <RoleBadge role={otherParticipant.role} />
               )}
             </div>
-            <div className="min-w-0">
-              <p className="truncate font-medium text-text-primary">{p.username}</p>
-              <p className="text-text-muted text-sm">
-                {isConnected ? 'Online' : 'Offline'}
-              </p>
-            </div>
+            <p className="text-sm text-slate-500">
+              {isOnline ? 'Online' : 'Offline'}
+            </p>
           </div>
-        ))}
-        <ProductContextCard context={conversation.context} />
-      </div>
+        </div>
 
-      <div className="chat-scroll-container flex-1 overflow-y-auto px-6 py-5">
-        <div className="flex flex-col gap-4">
-          {messages.map((msg) => (
-            <MessageBubble key={msg._id} message={msg} isOwn={msg.sender._id === user?._id} />
-          ))}
-          <div ref={messagesEndRef} />
+        <div className="flex items-center gap-2">
+          <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
+            <Phone className="h-[18px] w-[18px]" />
+          </button>
+          <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
+            <Video className="h-[18px] w-[18px]" />
+          </button>
+          <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
+            <MoreVertical className="h-[18px] w-[18px]" />
+          </button>
         </div>
       </div>
 
-      <TypingIndicator usernames={currentTyping} />
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-6 py-6 pb-2 md:pb-6 space-y-6 bg-slate-50/50">
+        {messages.map((msg, idx) => {
+          const showAvatar =
+            idx === messages.length - 1 ||
+            messages[idx + 1].senderId !== msg.senderId;
 
-      <form onSubmit={handleSend} className="flex items-center gap-3 border-t border-border px-6 py-4">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/gif,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploadingFile}
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl text-text-muted transition-colors hover:bg-bg-secondary hover:text-text-primary disabled:opacity-50"
+          return (
+            <MessageBubble
+              key={msg._id}
+              message={msg}
+              isOwn={msg.senderId === user?._id}
+              showAvatar={showAvatar}
+              senderFallback={
+                msg.senderId === otherParticipant._id
+                  ? otherParticipant
+                  : undefined
+              }
+            />
+          );
+        })}
+        {isTyping && <TypingIndicator />}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 bg-white border-t border-gray-100">
+        <form
+          onSubmit={handleSend}
+          className="flex items-end gap-3 rounded-md border border-gray-200 bg-white p-2 shadow-sm focus-within:border-bg-accent focus-within:ring-1 focus-within:ring-bg-accent/20 transition-all"
         >
-          {uploadingFile ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
+          <button
+            type="button"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+          >
             <Paperclip className="h-5 w-5" />
-          )}
-        </button>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={handleInputChange}
-          placeholder="Type a message..."
-          className="flex-1 h-11 rounded-xl border border-border bg-bg-secondary px-4 text-text-primary text-sm placeholder:text-text-muted focus:border-bg-accent focus:outline-none focus:ring-2 focus:ring-bg-accent/20"
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || isSending}
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-bg-accent text-text-on-accent transition-colors hover:bg-bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSending ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Send className="h-5 w-5" />
-          )}
-        </button>
-      </form>
+          </button>
+          <button
+            type="button"
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
+          >
+            <ImageIcon className="h-5 w-5" />
+          </button>
+          <input
+            type="text"
+            value={newMessage}
+            onChange={handleTyping}
+            placeholder="Type your message..."
+            className="h-10 flex-1 bg-transparent px-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={!newMessage.trim() || isSending}
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-bg-accent text-white transition-colors hover:bg-bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
