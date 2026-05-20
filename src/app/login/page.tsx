@@ -40,7 +40,7 @@ export default function LoginPage() {
           <p className="text-text-secondary text-base">Sign in to your account</p>
         </div>
 
-        <div className="rounded-2xl border border-border-glass bg-bg-glass p-[4rem] shadow-glass backdrop-blur-xl">
+        <div className="rounded-2xl border border-border-glass bg-bg-glass p-4 pt-8 shadow-glass backdrop-blur-xl">
           <form onSubmit={handleSubmit} className="flex flex-col gap-8">
             {error && (
               <div className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
