@@ -84,7 +84,7 @@ export interface ProfileUpdateInput {
 }
 
 export interface CreateConversationInput {
-  participantIds: string[];
+  participantIds?: string[];
   type?: ConversationType;
   context?: Partial<ConversationContext>;
 }

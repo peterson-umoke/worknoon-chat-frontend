@@ -10,6 +10,7 @@ import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
 import { Send, Phone, Video, MoreVertical, Image as ImageIcon, Paperclip, Trash2 } from 'lucide-react';
 import RoleBadge from './RoleBadge';
+import ProductContextCard from './ProductContextCard';
 
 interface ChatPanelProps {
   conversation: Conversation;
@@ -43,8 +44,7 @@ export default function ChatPanel({
     (p) => p._id !== user?._id
   );
 
-  if (!otherParticipant) return null;
-  const isOnline = onlineUsers.has(otherParticipant._id);
+  const isOnline = otherParticipant ? onlineUsers.has(otherParticipant._id) : false;
   const isTyping = typingUsers.has(conversation._id);
 
   const scrollToBottom = () => {
@@ -174,6 +174,8 @@ export default function ChatPanel({
     await onDeleteConversation(conversation._id);
   };
 
+  if (!otherParticipant) return null;
+
   return (
     <div className="flex h-full flex-col bg-white">
       {/* Header */}
@@ -244,6 +246,7 @@ export default function ChatPanel({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6 pb-2 md:pb-6 space-y-6 bg-slate-50/50">
+        <ProductContextCard context={conversation.context} />
         {messages.map((msg, idx) => {
           const showAvatar =
             idx === messages.length - 1 ||
