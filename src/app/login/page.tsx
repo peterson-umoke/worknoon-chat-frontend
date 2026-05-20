@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { MessageCircle, Loader2, Calendar, Clock, Menu, MessageSquare } from 'lucide-react';
@@ -127,12 +126,7 @@ export default function LoginPage() {
                       </button>
                     </form>
 
-                    <div className="mt-6 text-center text-sm text-text-secondary">
-                      Don&apos;t have an account?{' '}
-                      <Link href="/signup" className="font-medium text-bg-accent hover:underline">
-                        Sign up
-                      </Link>
-                    </div>
+
                   </div>
 
                   <div className="mt-4 text-xs text-text-muted text-center">
