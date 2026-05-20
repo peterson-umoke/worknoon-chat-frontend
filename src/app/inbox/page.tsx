@@ -117,6 +117,10 @@ export default function InboxPage() {
     }) => {
       if (!lastMessage) return;
 
+      if (activeConversationIdRef.current === conversationId) {
+        setMessages((prev) => (prev.some((msg) => msg._id === lastMessage._id) ? prev : [...prev, lastMessage]));
+      }
+
       setConversations((prev) => {
         const idx = prev.findIndex((conv) => conv._id === conversationId);
         const currentUserId = currentUserIdRef.current;
