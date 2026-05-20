@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../context/SocketContext';
@@ -26,6 +26,16 @@ export default function InboxPage() {
   const [showNewChat, setShowNewChat] = useState(false);
   const [creatingConversationId, setCreatingConversationId] = useState<string | null>(null);
   const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
+  const activeConversationIdRef = useRef<string | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    activeConversationIdRef.current = activeConversation?._id || null;
+  }, [activeConversation?._id]);
+
+  useEffect(() => {
+    currentUserIdRef.current = user?._id || null;
+  }, [user?._id]);
 
   const loadConversations = useCallback(async () => {
     if (!token) return;
@@ -109,15 +119,16 @@ export default function InboxPage() {
 
       setConversations((prev) => {
         const idx = prev.findIndex((conv) => conv._id === conversationId);
-        if (idx === -1 || !user) return prev;
+        const currentUserId = currentUserIdRef.current;
+        if (idx === -1 || !currentUserId) return prev;
 
         const current = prev[idx];
-        const isActiveConversation = activeConversation?._id === conversationId;
-        const isIncoming = lastMessage.sender._id !== user._id;
+        const isActiveConversation = activeConversationIdRef.current === conversationId;
+        const isIncoming = lastMessage.sender._id !== currentUserId;
 
         const nextUnreadCount = { ...current.unreadCount };
         if (isIncoming && !isActiveConversation) {
-          nextUnreadCount[user._id] = (nextUnreadCount[user._id] || 0) + 1;
+          nextUnreadCount[currentUserId] = (nextUnreadCount[currentUserId] || 0) + 1;
         }
 
         const updatedConversation: Conversation = {
@@ -138,7 +149,7 @@ export default function InboxPage() {
     return () => {
       socket.off('conversationUpdated', handleConversationUpdated);
     };
-  }, [socket, activeConversation?._id, user]);
+  }, [socket]);
 
   useEffect(() => {
     if (!socket || !activeConversation?._id) return;
