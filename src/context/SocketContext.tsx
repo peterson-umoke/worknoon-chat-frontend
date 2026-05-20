@@ -25,7 +25,7 @@ export function useSocket(): SocketContextType {
   return ctx;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const { token, user } = useAuth();
