@@ -5,6 +5,10 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Conversation, Message } from '../lib/types';
+import {
+  getConversationDisplayParticipant,
+  isConversationParticipant,
+} from '../lib/conversationDisplay';
 import * as api from '../lib/api';
 import MessageBubble from './MessageBubble';
 import TypingIndicator from './TypingIndicator';
@@ -40,9 +44,8 @@ export default function ChatPanel({
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const otherParticipant = conversation.participants.find(
-    (p) => p._id !== user?._id
-  );
+  const otherParticipant = user ? getConversationDisplayParticipant(conversation, user) : undefined;
+  const canDeleteConversation = Boolean(user && isConversationParticipant(conversation, user));
 
   const isOnline = otherParticipant ? onlineUsers.has(otherParticipant._id) : false;
   const isTyping = typingUsers.has(conversation._id);
@@ -216,6 +219,7 @@ export default function ChatPanel({
           <button className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
             <Video className="h-4.5 w-4.5" />
           </button>
+          {canDeleteConversation && (
           <div className="relative" ref={actionsMenuRef}>
             <button
               type="button"
@@ -241,6 +245,7 @@ export default function ChatPanel({
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
 

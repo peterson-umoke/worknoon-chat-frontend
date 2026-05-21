@@ -1,5 +1,6 @@
 import { Conversation, User } from '../lib/types';
 import { formatTime } from '../lib/utils';
+import { getConversationDisplayParticipant } from '../lib/conversationDisplay';
 import { Check, CheckCheck } from 'lucide-react';
 
 interface ChatListProps {
@@ -20,11 +21,11 @@ export default function ChatList({
   searchQuery,
 }: ChatListProps) {
   const filteredConversations = conversations.filter((conv) => {
-    const otherParticipant = conv.participants.find((p) => p._id !== currentUser._id);
-    if (!otherParticipant) return false;
+    const displayParticipant = getConversationDisplayParticipant(conv, currentUser);
+    if (!displayParticipant) return false;
     return (
-      otherParticipant.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      otherParticipant.email.toLowerCase().includes(searchQuery.toLowerCase())
+      displayParticipant.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      displayParticipant.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -39,10 +40,10 @@ export default function ChatList({
   return (
     <div className="flex flex-col">
       {filteredConversations.map((conv) => {
-        const otherParticipant = conv.participants.find((p) => p._id !== currentUser._id);
-        if (!otherParticipant) return null;
+        const displayParticipant = getConversationDisplayParticipant(conv, currentUser);
+        if (!displayParticipant) return null;
 
-        const isOnline = onlineUsers.has(otherParticipant._id);
+        const isOnline = onlineUsers.has(displayParticipant._id);
         const isActive = conv._id === activeId;
         const unreadCount = conv.unreadCount?.[currentUser._id] || 0;
         const isFromMe = conv.lastMessage?.sender?._id === currentUser._id;
@@ -64,10 +65,10 @@ export default function ChatList({
             <div className="relative shrink-0">
               <img
                 src={
-                  otherParticipant.avatar ||
-                  `https://api.dicebear.com/7.x/bottts/svg?seed=${otherParticipant.username}`
+                  displayParticipant.avatar ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${displayParticipant.username}`
                 }
-                alt={otherParticipant.username}
+                alt={displayParticipant.username}
                 className="h-10 w-10 rounded-full object-cover border border-slate-100 bg-white"
               />
               {isOnline && (
@@ -78,7 +79,7 @@ export default function ChatList({
             <div className="min-w-0 flex-1 text-left">
               <div className="flex items-center justify-between mb-0.5">
                 <p className="truncate text-sm font-medium text-slate-900 group-hover:text-bg-accent transition-colors">
-                  {otherParticipant.username}
+                  {displayParticipant.username}
                 </p>
                 {conv.lastMessage && (
                   <span className="shrink-0 text-xs text-slate-400">
